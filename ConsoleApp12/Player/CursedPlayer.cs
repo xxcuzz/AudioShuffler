@@ -44,7 +44,6 @@ internal sealed class CursedPlayer
             Thread.Sleep(TimeSpan.FromMilliseconds(beatDurationMs * segment.Length));
             if (_outputDevice.PlaybackState == PlaybackState.Stopped)
             {
-                _outputDevice?.Stop();
                 break;
             }
         }
