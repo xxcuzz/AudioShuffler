@@ -1,4 +1,5 @@
 ﻿using ConsoleApp12.Core;
+using ConsoleApp12.HelpMe;
 using NAudio.Wave;
 using System.Diagnostics;
 using System.Text;
@@ -20,8 +21,7 @@ internal sealed class CursedPlayer
         }
 
         // Get bpm
-        var detector = new BPMDetector(Environment.CurrentDirectory + name);
-        var bpm = detector.Groups[0].Tempo;
+        var bpm = BpmData.GetBpm(name);
         var beatDurationMs = 60 / bpm * 1000;
 
         Debug.WriteLine(bpm);
@@ -44,6 +44,7 @@ internal sealed class CursedPlayer
             Thread.Sleep(TimeSpan.FromMilliseconds(beatDurationMs * segment.Length));
             if (_outputDevice.PlaybackState == PlaybackState.Stopped)
             {
+                _outputDevice?.Stop();
                 break;
             }
         }
