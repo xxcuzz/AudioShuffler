@@ -1,29 +1,32 @@
 ﻿using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Jobs;
 using ConsoleApp12.Core;
-using ConsoleApp12.HelpMe;
 
 namespace ConsoleApp12.Benchmark
 {
     [SimpleJob(RuntimeMoniker.Net90)]
     [MemoryDiagnoser]
-    [MinColumn, MaxColumn]
     [HtmlExporter]
     public class ShuffleCalypse
     {
-        //public string kept = Environment.CurrentDirectory + 
-        //        SongsData.GetFileNames()
-        //        .First(x=>x.Contains("kept.mp3"));
+        private readonly string _testAudioFile;
 
-        [Benchmark]
-        public void Shuffling() => Shuffler.GetPlaybackSegments(128);
+        public ShuffleCalypse()
+        {
+            _testAudioFile = Path.Combine(Environment.CurrentDirectory, "songs", "kept.mp3");
+        }
 
-        // TODO
+        [Benchmark(Description = "BPM Detection")]
+        public BPMGroup[] BPMDetection()
+        {
+            var detector = new BPMDetector(_testAudioFile);
+            return detector.Groups;
+        }
 
-        //[Benchmark]
-        //public BPMDetector BPMDetection()
-        //{
-        //    return new BPMDetector(kept);
-        //}
+        [Benchmark(Description = "Audio Shuffling")]
+        public List<BeatPart> Shuffling()
+        {
+            return Shuffler.GetPlaybackSegments(128);
+        }
     }
 }
