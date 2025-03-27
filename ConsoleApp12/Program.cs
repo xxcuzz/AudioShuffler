@@ -1,7 +1,5 @@
-﻿using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Running;
+﻿using BenchmarkDotNet.Running;
 using ConsoleApp12.Benchmark;
-using ConsoleApp12.Core;
 using ConsoleApp12.HelpMe;
 using ConsoleApp12.Player;
 using System.Text;
@@ -10,7 +8,6 @@ namespace ConsoleApp12;
 
 public class Program
 {
-    private static readonly CursedPlayer s_cursedPlayer = new();
     private static List<string>? s_songNames;
 
     public static void Main()
@@ -25,20 +22,22 @@ public class Program
     private static void ShowUI()
     {
         s_songNames = SongsData.GetFileNames().ToList();
+        ShowSongs();
 
         while (true)
         {
-            ShowSongs();
-
             var chosenNumber = GetUserChoice(s_songNames.Count);
+            CursedPlayer.Stop();
 
             if (chosenNumber == -1)
             {
-                s_cursedPlayer.Stop();
                 continue;
             }
 
-            Task.Run(() => s_cursedPlayer.Play("/songs/" + s_songNames[chosenNumber - 1]));
+            DeleteLastLine();
+            ShowSongs();
+            Console.WriteLine($"Playing: {s_songNames[chosenNumber - 1]}");
+            Task.Run(() => CursedPlayer.Play("/songs/" + s_songNames[chosenNumber - 1])).ContinueWith(t => ShowSongs());
         }
     }
 
@@ -57,6 +56,7 @@ public class Program
     {
         var input = Console.ReadLine();
 
+        DeleteLastLine();
         if (int.TryParse(input, out int choice))
         {
             if (choice >= 0 && choice <= songCount)
@@ -66,5 +66,12 @@ public class Program
         }
 
         return -1;
+    }
+
+    private static void DeleteLastLine()
+    {
+        Console.SetCursorPosition(0, Console.CursorTop - 1);
+        Console.Write(new string(' ', Console.WindowWidth));
+        Console.SetCursorPosition(0, Console.CursorTop);
     }
 }

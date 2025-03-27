@@ -8,18 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="crimewave.mp3" />
-    <None Remove="crystal-castles-kept.mp3" />
-    <None Remove="Mercury.mp3" />
-    <None Remove="songs\Cobrah - DEBUT .mp3" />
-    <None Remove="songs\Lauren Bousfield - Locked Into Phantasy .mp3" />
-    <None Remove="songs\popolam.mp3" />
-    <None Remove="songs\SWRSLT - Pretty Cvnt .mp3" />
-    <None Remove="songs\Ушко - Стручковая фасоль .mp3" />
-    <None Remove="songs\Электрофорез - После фильма .mp3" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="songs\Cobrah - DEBUT .mp3">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </EmbeddedResource>

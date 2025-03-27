@@ -1,27 +1,29 @@
-﻿using BenchmarkDotNet.Attributes;
-using Microsoft.Extensions.Logging;
-using NAudio.Wave;
-using System.Diagnostics;
-using System.Text;
-
-namespace ConsoleApp12.Core;
+﻿namespace ConsoleApp12.Core;
 
 // TODO
 // sometimes deliberately messing up on some songs
 public static class Shuffler
 {
-    public static List<BeatPart> GetPlaybackSegments(float bpm, int beatsInStep = 4) {
+    // Play original intro and outro (in beats count)
+    private const int ORIGINAL_SOUND_OFFSET = 4;
+
+    public static List<BeatPart> GetPlaybackSegments(float bpm, double trackDurationMs, int beatsInStep = 4)
+    {
         List<BeatPart> segments = [];
 
-        // 4 * 8 should be replaced with some representation of track duration
-        for (int i = 0; i < 4 * 8; i++)
+        var beatDurationMs = 60 / bpm * 1000;
+        var beatsInTrack = trackDurationMs / beatDurationMs;
+        var beatsInPart = beatsInStep * beatsInStep;
+
+        for (int i = 0; i < beatsInTrack / beatsInPart; i++)
         {
-            var beatsInPart = beatsInStep * beatsInStep;
             var part = GetPartFromAudio(bpm, beatsInPart, beatsInPart * i);
-            var shuffledPart = ShufflePart(part);
+            var shuffledPart = Shuffle(part);
             segments.AddRange(shuffledPart);
         }
 
+        PutOriginalIntroAndOutro(segments);
+        
         return segments;
     }
 
@@ -33,53 +35,91 @@ public static class Shuffler
         for (int partIndex = offset; partIndex < offset + beatsInPart; partIndex++)
         {
             var startPosition = beatDuration * partIndex;
-
             startingPositions.Add(startPosition);
         }
 
         return startingPositions;
     }
 
-    // TODO Implement non-repeatable shuffle
-    internal static List<BeatPart> ShufflePart(List<double> parts)
+    internal static List<BeatPart> Shuffle(List<double> parts)
     {
-        List<BeatPart> outPositions = [];
-        int[] lastR = [-1, -1];
+        // Divide parts into even and odd groups
+        if (parts == null || parts.Count == 0)
+            throw new ArgumentException("Parts list is empty");
 
-        if (parts[0] == 0)
-        {
-            outPositions.Add(new BeatPart(0, 4));
-        }
+        List<BeatPart> evenParts = [];
+        List<BeatPart> oddParts = [];
 
+        bool isEvenPart = true;
         for (int i = 0; i < parts.Count;)
         {
-            int randomLength = Math.Min(Random.Shared.Next(1, 4), parts.Count - i);
-            var oddOrEven = i % 2;
+            int groupSize = Random.Shared.Next(1, Math.Min(4, parts.Count - i));
+            if (isEvenPart)
+            {
+                evenParts.Add(new BeatPart(parts[i], groupSize));
+            }
+            else
+            {
+                oddParts.Add(new BeatPart(parts[i], groupSize));
+            }
 
-            var selectables = parts.Select((value, index) => (value, index))
-                .Where(p =>
-                p.index != lastR[0] &&
-                p.index != lastR[1] &&
-                p.index % 2 == oddOrEven)
-                .ToList();
-
-
-            if (selectables.Count == 0)
-                return outPositions;
-            var randIndex = Random.Shared.Next(selectables.Count);
-            var selectedPart = selectables[randIndex].value;
-
-            var partElement = parts.Skip(parts.IndexOf(selectedPart)).First();
-
-            int index = parts.IndexOf(selectedPart);
-
-            lastR[1] = lastR[0];
-            lastR[0] = index;
-
-            outPositions.Add(new BeatPart(partElement, randomLength));
-            i += randomLength;
+            i += groupSize;
+            if (groupSize % 2 == 1)
+                isEvenPart = !isEvenPart;
         }
 
-        return outPositions;
+        // Shuffle each group
+        evenParts = evenParts.OrderBy(_ => Random.Shared.Next()).ToList();
+        oddParts = oddParts.OrderBy(_ => Random.Shared.Next()).ToList();
+
+        // Merge groups
+        List<BeatPart> shuffledParts = [];
+        int evenIndex = 0;
+        int oddIndex = 0;
+        isEvenPart = true;
+
+        while (evenIndex < evenParts.Count || oddIndex < oddParts.Count)
+        {
+            BeatPart currentPart;
+            if (isEvenPart && evenIndex < evenParts.Count)
+            {
+                currentPart = evenParts[evenIndex++];
+            }
+            else if(!isEvenPart && oddIndex < oddParts.Count)
+            {
+                currentPart = oddParts[oddIndex++];
+            }
+            else
+            {
+                while (evenIndex < evenParts.Count)
+                {
+                    shuffledParts.Add(evenParts[evenIndex++]);
+                }
+                while (oddIndex < oddParts.Count)
+                {
+                    shuffledParts.Add(oddParts[oddIndex++]);
+                }
+                break;
+            }
+           
+            shuffledParts.Add(currentPart);
+            if (currentPart.Length % 2 == 1)
+                isEvenPart = !isEvenPart;
+        }
+
+        return shuffledParts;
+    }
+
+    private static void PutOriginalIntroAndOutro(List<BeatPart> segments)
+    {
+        // Need to keep lengths to not mess up rhythm
+        int first = segments.FindIndex(s => s.StartPosition == 0);
+        segments[first] = new BeatPart(segments[0].StartPosition, segments[first].Length);
+        segments[0] = new BeatPart(0, segments[0].Length);
+
+        int last = segments.FindIndex(s => s.StartPosition == segments.Max(seg => seg.StartPosition));
+        double lastPosition = segments[^1].StartPosition;
+        segments[^1] = new BeatPart(segments[last].StartPosition, segments[^1].Length);
+        segments[last] = new BeatPart(lastPosition, segments[last].Length);
     }
 }

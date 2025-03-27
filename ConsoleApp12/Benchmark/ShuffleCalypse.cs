@@ -26,7 +26,7 @@ namespace ConsoleApp12.Benchmark
         [Benchmark(Description = "Audio Shuffling")]
         public List<BeatPart> Shuffling()
         {
-            return Shuffler.GetPlaybackSegments(128);
+            return Shuffler.GetPlaybackSegments(128, 180_000);
         }
     }
 }

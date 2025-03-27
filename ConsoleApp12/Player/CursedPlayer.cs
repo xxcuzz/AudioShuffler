@@ -2,57 +2,49 @@
 using ConsoleApp12.HelpMe;
 using NAudio.Wave;
 using System.Diagnostics;
-using System.Text;
-using System.Xml.Linq;
 
 namespace ConsoleApp12.Player;
 
-internal sealed class CursedPlayer
+internal static class CursedPlayer
 {
-    private WaveOutEvent _outputDevice;
-    private AudioFileReader _reader;
+    private static WaveOutEvent? _outputDevice;
+    private static AudioFileReader? _reader;
 
-    public Task Play(string name)
+    public static Task Play(string name)
     {
-
-        if (_outputDevice != null)
-        {
-            _outputDevice?.Stop();
-        }
-
         // Get bpm
         var bpm = BpmData.GetBpm(name);
         var beatDurationMs = 60 / bpm * 1000;
 
         Debug.WriteLine(bpm);
 
-        // Shuffle
-        var segmentsToPlay = Shuffler.GetPlaybackSegments(bpm);
-
-        // Player init
+        // Player initialization
         _outputDevice = new WaveOutEvent();
         _reader = new AudioFileReader(Environment.CurrentDirectory + name);
         _outputDevice.Init(_reader);
 
-        // TODO
-        // Create actual .waw or something instead of setting player position every time ?
+        var trackDurationMs = _reader.TotalTime.TotalMilliseconds;
+
+        // Shuffle
+        var segmentsToPlay = Shuffler.GetPlaybackSegments(bpm, trackDurationMs);
+        _outputDevice.Play();
+
         foreach (var segment in segmentsToPlay)
         {
-            // null ref maybe?
+            if (!(_outputDevice.PlaybackState == PlaybackState.Playing)) break;
             _reader.CurrentTime = TimeSpan.FromMilliseconds(segment.StartPosition);
-            _outputDevice.Play();
             Thread.Sleep(TimeSpan.FromMilliseconds(beatDurationMs * segment.Length));
-            if (_outputDevice.PlaybackState == PlaybackState.Stopped)
-            {
-                break;
-            }
         }
 
+
+        Stop();
         return Task.CompletedTask;
     }
 
-    public void Stop()
+    public static void Stop()
     {
         _outputDevice?.Stop();
+        _reader?.Dispose();
+        _outputDevice?.Dispose();
     }
 }
