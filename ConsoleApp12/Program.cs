@@ -9,7 +9,7 @@ namespace ConsoleApp12;
 public class Program
 {
     private static List<string>? s_songNames;
-
+    private static CancellationTokenSource _cts = new();
     public static void Main()
     {
         Console.OutputEncoding = Encoding.UTF8;
@@ -27,7 +27,10 @@ public class Program
         while (true)
         {
             var chosenNumber = GetUserChoice(s_songNames.Count);
-            CursedPlayer.Stop();
+
+            _cts.Cancel();
+            _cts.Dispose();
+            _cts = new CancellationTokenSource();
 
             if (chosenNumber == -1)
             {
@@ -37,7 +40,8 @@ public class Program
             DeleteLastLine();
             ShowSongs();
             Console.WriteLine($"Playing: {s_songNames[chosenNumber - 1]}");
-            Task.Run(() => CursedPlayer.Play("/songs/" + s_songNames[chosenNumber - 1])).ContinueWith(t => ShowSongs());
+            Task.Run(() => CursedPlayer.Play("/songs/" + s_songNames[chosenNumber - 1], _cts.Token))
+                .ContinueWith(t => ShowSongs());
         }
     }
 
